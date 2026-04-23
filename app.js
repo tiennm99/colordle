@@ -257,12 +257,14 @@
 
   function submitGuess() {
     if (state.done) return;
-    const rgb = parseHex($('hexInput').value);
+    const rgb = readRgbInputs();
     if (!rgb) {
-      $('hexInput').classList.add('invalid');
+      RGB_IDS.forEach((id) => {
+        if (parseChannel($(id).value) == null) $(id).classList.add('invalid');
+      });
       return;
     }
-    $('hexInput').classList.remove('invalid');
+    RGB_IDS.forEach((id) => $(id).classList.remove('invalid'));
 
     const channels = rgb.map((v, i) => {
       const delta = Math.abs(v - state.target[i]);
@@ -288,11 +290,7 @@
 
   function renderBands() {
     const bands = $('bands');
-    bands.innerHTML = '';
-    const title = document.createElement('div');
-    title.className = 'bands-title';
-    title.textContent = 'Feedback ranges (|delta| per channel)';
-    bands.appendChild(title);
+    bands.querySelectorAll('.band').forEach((el) => el.remove());
 
     state.thresholds.forEach((t, i) => {
       const g = Math.max(0, Math.floor(t.green));
@@ -445,6 +443,7 @@
           `<span class="reveal" style="background:${bhex}"></span> <strong>${bhex}</strong> — ` +
           `<span class="best-pct" style="background:hsl(${best.pct * 1.2}, 58%, 38%)">${best.pct}%</span></p>`;
       }
+      result.appendChild(buildShareRow());
     } else {
       result.hidden = true;
     }
@@ -456,24 +455,18 @@
   function setGuess(rgb, origin) {
     const hex = rgbToHex(rgb);
     if (origin !== 'picker') $('colorPicker').value = hex;
-    if (origin !== 'hex') $('hexInput').value = hex;
     if (origin !== 'rgb') {
       RGB_IDS.forEach((id, i) => { $(id).value = String(rgb[i]); });
     }
-    $('guessPreview').style.background = hex;
-    $('hexInput').classList.remove('invalid');
+    const preview = $('guessPreview');
+    preview.style.background = hex;
+    preview.title = `${hex}  (${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
     RGB_IDS.forEach((id) => $(id).classList.remove('invalid'));
   }
 
   $('colorPicker').addEventListener('input', () => {
     const rgb = parseHex($('colorPicker').value);
     if (rgb) setGuess(rgb, 'picker');
-  });
-
-  $('hexInput').addEventListener('input', () => {
-    const rgb = parseHex($('hexInput').value);
-    if (rgb) setGuess(rgb, 'hex');
-    else $('hexInput').classList.add('invalid');
   });
 
   RGB_IDS.forEach((id) => {
@@ -486,8 +479,247 @@
   });
 
   const submitOnEnter = (e) => { if (e.key === 'Enter') submitGuess(); };
-  $('hexInput').addEventListener('keydown', submitOnEnter);
   RGB_IDS.forEach((id) => $(id).addEventListener('keydown', submitOnEnter));
+
+  const iconImage = new Image();
+  iconImage.crossOrigin = 'anonymous';
+  iconImage.src = 'colordle_icon.png';
+  const iconReady = new Promise((resolve) => {
+    iconImage.addEventListener('load', () => resolve(true), { once: true });
+    iconImage.addEventListener('error', () => resolve(false), { once: true });
+  });
+
+  function shareContext() {
+    const best = bestGuess(state.guesses, state.target) || {
+      guess: state.guesses[state.guesses.length - 1] || { rgb: [128, 128, 128] },
+      pct: 0,
+    };
+    return {
+      won: state.won,
+      target: state.target,
+      guesses: state.guesses.length,
+      maxGuesses: state.maxGuesses,
+      bestRgb: best.guess.rgb,
+      bestPct: best.pct,
+    };
+  }
+
+  function shareSummary(ctx) {
+    if (ctx.won) {
+      return `I solved Colordle in ${ctx.guesses} ${
+        ctx.guesses === 1 ? 'guess' : 'guesses'
+      }! 🎨`;
+    }
+    return `Colordle got me this time — closest guess was ${ctx.bestPct}% after ${ctx.guesses} tries. 🎨`;
+  }
+
+  function openShareWindow(url) {
+    const w = window.open(url, '_blank');
+    if (!w) window.location.href = url;
+  }
+
+  function shareX() {
+    const ctx = shareContext();
+    const text = `${shareSummary(ctx)}\n${window.location.href}`;
+    openShareWindow(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
+    );
+  }
+
+  function shareFacebook() {
+    openShareWindow(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`,
+    );
+  }
+
+  async function drawResultImage(skipIcon = false) {
+    const ctx = shareContext();
+    const hasIcon = skipIcon ? false : await iconReady;
+    const W = 900;
+    const H = 530;
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const g = canvas.getContext('2d');
+
+    // Background
+    g.fillStyle = '#141414';
+    g.fillRect(0, 0, W, H);
+    const grad = g.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, '#1c1c1c');
+    grad.addColorStop(1, '#0f0f0f');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, W, H);
+
+    // Title (optionally with icon on the left)
+    const titleText = 'COLORDLE';
+    const titleY = 95;
+    const iconSize = 72;
+    const iconGap = 16;
+    g.font = '800 72px system-ui, -apple-system, "Segoe UI", sans-serif';
+    g.textBaseline = 'middle';
+    g.textAlign = 'left';
+    const titleW = g.measureText(titleText).width;
+    const blockW = hasIcon ? iconSize + iconGap + titleW : titleW;
+    const startX = (W - blockW) / 2;
+
+    if (hasIcon) {
+      g.drawImage(iconImage, startX, titleY - iconSize / 2, iconSize, iconSize);
+    }
+    g.fillStyle = '#f5f5f5';
+    g.fillText(titleText, hasIcon ? startX + iconSize + iconGap : startX, titleY);
+
+    // Subtitle
+    g.textAlign = 'center';
+    g.textBaseline = 'alphabetic';
+    g.fillStyle = '#8a8a8a';
+    g.font = '500 22px system-ui, sans-serif';
+    g.fillText(ctx.won ? 'Solved' : 'Stumped', W / 2, 150);
+
+    // Swatches
+    const sw = 180;
+    const sh = 180;
+    const topY = 180;
+    const gap = 60;
+    const totalW = sw * 2 + gap;
+    const leftX = (W - totalW) / 2;
+    const rightX = leftX + sw + gap;
+
+    const drawSwatch = (x, rgb, label, hex) => {
+      g.fillStyle = '#222';
+      g.fillRect(x - 4, topY - 4, sw + 8, sh + 8);
+      g.fillStyle = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+      g.fillRect(x, topY, sw, sh);
+
+      g.fillStyle = '#cfcfcf';
+      g.font = '600 20px system-ui, sans-serif';
+      g.fillText(label, x + sw / 2, topY - 18);
+
+      g.fillStyle = '#f0f0f0';
+      g.font = '700 24px ui-monospace, SFMono-Regular, Menlo, monospace';
+      g.fillText(hex, x + sw / 2, topY + sh + 34);
+
+      g.fillStyle = '#8a8a8a';
+      g.font = '500 18px ui-monospace, monospace';
+      g.fillText(
+        `(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`,
+        x + sw / 2,
+        topY + sh + 58,
+      );
+    };
+
+    const targetHex = rgbToHex(ctx.target);
+    const bestHex = rgbToHex(ctx.bestRgb);
+    drawSwatch(leftX, ctx.bestRgb, 'Best guess', bestHex);
+    drawSwatch(rightX, ctx.target, 'Target', targetHex);
+
+    // Result line — well below the RGB numbers under the swatches
+    const pillY = H - 50;
+    const pillPad = 18;
+    g.font = '800 30px system-ui, sans-serif';
+    const pctText = `${ctx.bestPct}% close`;
+    const tallyText = ctx.won
+      ? `${ctx.guesses} / ${ctx.maxGuesses} guesses`
+      : `after ${ctx.guesses} guesses`;
+    const fullText = `${pctText}   •   ${tallyText}`;
+    const textW = g.measureText(fullText).width;
+    const pillW = textW + pillPad * 2;
+    const pillX = (W - pillW) / 2;
+    const pillH = 48;
+
+    g.fillStyle = `hsl(${ctx.bestPct * 1.2}, 58%, 38%)`;
+    const radius = pillH / 2;
+    g.beginPath();
+    g.moveTo(pillX + radius, pillY - pillH / 2);
+    g.arcTo(pillX + pillW, pillY - pillH / 2, pillX + pillW, pillY + pillH / 2, radius);
+    g.arcTo(pillX + pillW, pillY + pillH / 2, pillX, pillY + pillH / 2, radius);
+    g.arcTo(pillX, pillY + pillH / 2, pillX, pillY - pillH / 2, radius);
+    g.arcTo(pillX, pillY - pillH / 2, pillX + pillW, pillY - pillH / 2, radius);
+    g.closePath();
+    g.fill();
+
+    g.fillStyle = '#fff';
+    g.textBaseline = 'middle';
+    g.fillText(fullText, W / 2, pillY);
+
+    return canvas;
+  }
+
+  function canvasToBlob(canvas) {
+    return new Promise((resolve, reject) => {
+      try {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('toBlob returned null'));
+        }, 'image/png');
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  async function shareImage() {
+    let blob;
+    try {
+      const canvas = await drawResultImage(false);
+      blob = await canvasToBlob(canvas);
+    } catch (err) {
+      // Tainted canvas (e.g. file:// origin or CORS-less icon host).
+      // Redraw without the icon and try again.
+      if (String(err && err.name) === 'SecurityError' ||
+          /tainted/i.test(String(err && err.message))) {
+        console.warn('Share image tainted by icon — regenerating without it.', err);
+        const fallback = await drawResultImage(true);
+        blob = await canvasToBlob(fallback);
+      } else {
+        throw err;
+      }
+    }
+
+    const file = new File([blob], 'colordle.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'Colordle',
+          text: shareSummary(shareContext()),
+        });
+        return;
+      } catch (_) { /* user cancelled — fall through to download */ }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'colordle.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function buildShareRow() {
+    const row = document.createElement('div');
+    row.className = 'share-row';
+
+    const label = document.createElement('span');
+    label.className = 'share-label';
+    label.textContent = 'Share:';
+    row.appendChild(label);
+
+    const mk = (cls, text, handler) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `share-btn ${cls}`;
+      b.textContent = text;
+      b.addEventListener('click', handler);
+      return b;
+    };
+
+    row.appendChild(mk('x', 'X', shareX));
+    row.appendChild(mk('fb', 'Facebook', shareFacebook));
+    row.appendChild(mk('img', 'Image', shareImage));
+    return row;
+  }
 
   $('submitGuess').addEventListener('click', submitGuess);
   $('newGame').addEventListener('click', newGame);

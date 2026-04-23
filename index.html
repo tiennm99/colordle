@@ -4,12 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Colordle</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="favicon.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main>
     <header>
-      <h1>Colordle</h1>
+      <h1>
+        <img src="colordle_icon.png" alt="" class="game-icon">
+        Colordle
+      </h1>
       <div class="controls">
         <label>
           Max guesses
@@ -28,8 +33,6 @@
 
     <section class="input">
       <input type="color" id="colorPicker" value="#808080" aria-label="Pick a color">
-      <input type="text" id="hexInput" value="#808080" maxlength="7" spellcheck="false"
-             aria-label="Hex color (e.g. #aabbcc)" placeholder="#rrggbb">
       <div class="rgb-group" role="group" aria-label="RGB values">
         <input type="text" id="rInput" value="128" maxlength="3"
                inputmode="numeric" pattern="[0-9]*" aria-label="Red (0-255)">
@@ -42,7 +45,22 @@
       <button id="submitGuess" type="button">Guess</button>
     </section>
 
-    <section class="bands" id="bands" aria-label="Current thresholds"></section>
+    <section class="bands" id="bands" aria-label="Current thresholds">
+      <div class="bands-title">
+        <span>Feedback ranges (|Δ| per channel)</span>
+        <span class="help-chip" tabindex="0" role="button"
+              aria-label="Explain feedback ranges">?</span>
+        <div class="help-tooltip" role="tooltip">
+          Each bar is the full 0–255 range for a channel. The coloured
+          segments are the sizes of the <b>green</b>, <b>yellow</b>, and
+          <b>red</b> feedback zones for that channel right now.
+          After a yellow result the zones halve for that channel; a green
+          (or exact) result quarters them — so the band tightens the
+          closer you get, and a new yellow means something different than
+          it did a guess ago.
+        </div>
+      </div>
+    </section>
 
     <section class="history" id="history" aria-live="polite"></section>
 
