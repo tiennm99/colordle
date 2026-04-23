@@ -45,21 +45,24 @@
       <button id="submitGuess" type="button">Guess</button>
     </section>
 
-    <section class="bands" id="bands" aria-label="Current thresholds">
-      <div class="bands-title">
-        <span>Feedback ranges (|Δ| per channel)</span>
+    <section class="possible" id="possible" aria-label="Possible target values">
+      <div class="poss-title">
+        <span>Possible target</span>
         <span class="help-chip" tabindex="0" role="button"
-              aria-label="Explain feedback ranges">?</span>
+              aria-label="Explain possible target">?</span>
         <div class="help-tooltip" role="tooltip">
-          Each bar is the full 0–255 range for a channel. The coloured
-          segments are the sizes of the <b>green</b>, <b>yellow</b>, and
-          <b>red</b> feedback zones for that channel right now.
-          After a yellow result the zones halve for that channel; a green
-          (or exact) result quarters them — so the band tightens the
-          closer you get, and a new yellow means something different than
-          it did a guess ago.
+          Each bar spans the 0–255 range for that channel. The
+          <b>highlighted</b> segment is where the target can still be,
+          after combining everything your guesses told you. Tick marks
+          are your past guess values. Zones tighten as you get closer:
+          a yellow result halves them, a green result quarters them.
         </div>
       </div>
+      <button id="applySuggestion" class="poss-apply" type="button" hidden>
+        <span class="poss-apply-label">Try midpoint</span>
+        <span class="poss-apply-swatch" id="applySuggestionSwatch"></span>
+        <span class="poss-apply-hex" id="applySuggestionHex"></span>
+      </button>
     </section>
 
     <section class="history" id="history" aria-live="polite"></section>
@@ -74,8 +77,9 @@
         <span class="chip exact">&#10003;</span> exact
       </p>
       <p class="note">
-        Each channel tightens as you get closer: a yellow result halves the
-        thresholds for that channel, green (or exact) quarters them.
+        The <b>Possible target</b> bars narrow as you guess — they show
+        where each channel can still be. Hit <b>Try midpoint</b> to load
+        the middle of the remaining region.
       </p>
     </footer>
   </main>

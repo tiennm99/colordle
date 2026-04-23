@@ -288,44 +288,109 @@
     render();
   }
 
-  function renderBands() {
-    const bands = $('bands');
-    bands.querySelectorAll('.band').forEach((el) => el.remove());
+  function intersectRanges(a, b) {
+    const out = [];
+    for (const [al, ah] of a) {
+      for (const [bl, bh] of b) {
+        const lo = Math.max(al, bl);
+        const hi = Math.min(ah, bh);
+        if (lo <= hi) out.push([lo, hi]);
+      }
+    }
+    out.sort((x, y) => x[0] - y[0]);
+    const merged = [];
+    for (const r of out) {
+      const last = merged[merged.length - 1];
+      if (last && r[0] <= last[1] + 1) last[1] = Math.max(last[1], r[1]);
+      else merged.push([r[0], r[1]]);
+    }
+    return merged;
+  }
 
-    state.thresholds.forEach((t, i) => {
-      const g = Math.max(0, Math.floor(t.green));
-      const y = Math.max(0, Math.floor(t.yellow));
-      const greenPct = (t.green / 255) * 100;
-      const yellowPct = Math.max(0, ((t.yellow - t.green) / 255) * 100);
-      const redPct = Math.max(0, 100 - greenPct - yellowPct);
+  function feasibleRanges(channelIdx) {
+    let ranges = [[0, 255]];
+    for (const g of state.guesses) {
+      ranges = intersectRanges(ranges, possibleRanges(g.channels[channelIdx]));
+      if (!ranges.length) return [];
+    }
+    return ranges;
+  }
 
+  function suggestedValue(ranges) {
+    if (!ranges.length) return null;
+    let widest = ranges[0];
+    for (const r of ranges) {
+      if ((r[1] - r[0]) > (widest[1] - widest[0])) widest = r;
+    }
+    return Math.round((widest[0] + widest[1]) / 2);
+  }
+
+  function renderPossible() {
+    const panel = $('possible');
+    panel.querySelectorAll('.poss-row').forEach((el) => el.remove());
+
+    const feasible = [0, 1, 2].map((i) => feasibleRanges(i));
+    const applyBtn = $('applySuggestion');
+    const title = panel.querySelector('.poss-title');
+
+    [0, 1, 2].forEach((i) => {
+      const ranges = feasible[i];
       const row = document.createElement('div');
-      row.className = 'band';
+      row.className = `poss-row c${CHANNEL_NAMES[i].toLowerCase()}`;
 
       const label = document.createElement('span');
-      label.className = 'band-label';
+      label.className = 'poss-label';
       label.textContent = CHANNEL_NAMES[i];
       row.appendChild(label);
 
-      const bar = document.createElement('div');
-      bar.className = 'band-bar';
+      const track = document.createElement('div');
+      track.className = 'poss-track';
 
-      const segs = [
-        { cls: 'green',  width: greenPct,  text: `≤${g}` },
-        { cls: 'yellow', width: yellowPct, text: `≤${y}` },
-        { cls: 'red',    width: redPct,    text: `>${y}` },
-      ];
-      segs.forEach((s) => {
+      ranges.forEach(([lo, hi]) => {
         const seg = document.createElement('span');
-        seg.className = `band-seg ${s.cls}`;
-        seg.style.width = `${s.width}%`;
-        seg.textContent = s.text;
-        seg.title = `${s.cls}: ${s.text}`;
-        bar.appendChild(seg);
+        seg.className = 'poss-seg';
+        seg.style.left = `${(lo / 255) * 100}%`;
+        seg.style.width = `${Math.max(0.5, ((hi - lo) / 255) * 100)}%`;
+        seg.title = lo === hi ? `target = ${lo}` : `target ∈ ${lo}–${hi}`;
+        track.appendChild(seg);
       });
-      row.appendChild(bar);
-      bands.appendChild(row);
+
+      state.guesses.forEach((g, gi) => {
+        const c = g.channels[i];
+        const tick = document.createElement('span');
+        tick.className = `poss-tick ${c.result}`;
+        tick.style.left = `${(c.value / 255) * 100}%`;
+        tick.title = `guess #${gi + 1}: ${CHANNEL_NAMES[i]}=${c.value} (${c.result})`;
+        track.appendChild(tick);
+      });
+
+      row.appendChild(track);
+
+      const hint = document.createElement('span');
+      hint.className = 'poss-hint';
+      hint.textContent = ranges.length
+        ? rangesLabel(ranges)
+        : '—';
+      row.appendChild(hint);
+
+      panel.insertBefore(row, applyBtn);
     });
+
+    const canSuggest =
+      !state.done &&
+      state.guesses.length > 0 &&
+      feasible.every((r) => r.length > 0);
+    if (canSuggest) {
+      const rgb = feasible.map(suggestedValue);
+      const hex = rgbToHex(rgb);
+      $('applySuggestionSwatch').style.background = hex;
+      $('applySuggestionHex').textContent = hex;
+      applyBtn.hidden = false;
+      applyBtn.dataset.rgb = rgb.join(',');
+    } else {
+      applyBtn.hidden = true;
+      delete applyBtn.dataset.rgb;
+    }
   }
 
   function render() {
@@ -341,7 +406,7 @@
     }
     $('guessCount').textContent = state.guesses.length;
     $('maxGuessesLabel').textContent = state.maxGuesses;
-    renderBands();
+    renderPossible();
 
     const history = $('history');
     history.innerHTML = '';
@@ -389,20 +454,6 @@
           `Ranges at this guess: green ≤${gN}, yellow ≤${yN}, red >${yN}`;
 
         slot.appendChild(block);
-
-        const ranges = possibleRanges(c);
-        const bar = document.createElement('div');
-        bar.className = 'cbar';
-        ranges.forEach(([lo, hi]) => {
-          const fill = document.createElement('span');
-          fill.className = 'cbar-fill';
-          fill.style.left = `${(lo / 255) * 100}%`;
-          fill.style.width = `${Math.max(0.6, ((hi - lo) / 255) * 100)}%`;
-          bar.appendChild(fill);
-        });
-        bar.title = `${letter} target ∈ ${rangesLabel(ranges)}`;
-        slot.appendChild(bar);
-
         channels.appendChild(slot);
       });
       row.appendChild(channels);
@@ -723,6 +774,14 @@
 
   $('submitGuess').addEventListener('click', submitGuess);
   $('newGame').addEventListener('click', newGame);
+  $('applySuggestion').addEventListener('click', () => {
+    const raw = $('applySuggestion').dataset.rgb;
+    if (!raw) return;
+    const rgb = raw.split(',').map((n) => parseInt(n, 10));
+    if (rgb.length === 3 && rgb.every((n) => n >= 0 && n <= 255)) {
+      setGuess(rgb, 'apply');
+    }
+  });
 
   setGuess(parseHex($('colorPicker').value), 'picker');
   newGame();
