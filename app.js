@@ -74,6 +74,33 @@
       "The last breath saved you.",
       "Cut it finer next time, will you?",
     ],
+    lose: [
+      "Close, but no pigment.",
+      "The spectrum wins this round.",
+      "So near, so far.",
+      "Defeated by a swatch.",
+      "The palette mocks you.",
+      "Chromatically outmatched.",
+      "RGB: Really Got Bested.",
+      "The hex had the last laugh.",
+      "A noble attempt, in vain.",
+      "Even Monet had off days.",
+      "Crashed on the color wheel.",
+      "Not every hue wants to be found.",
+      "Pixel defeat.",
+      "The color slipped into the void.",
+      "Rods and cones: revolt.",
+      "Outfoxed by six little digits.",
+    ],
+    heartbreak: [
+      "Two out of three is a real kick in the teeth.",
+      "Painful. Genuinely painful.",
+      "So close the pixels could taste it.",
+      "A tragedy in three channels.",
+      "The universe is cruel today.",
+      "Heartbreak hex.",
+      "That one will sting for a while.",
+    ],
   };
 
   function successMessage(guesses, max) {
@@ -84,6 +111,18 @@
     if (ratio <= 0.34) return pick(MESSAGES.prodigy);
     if (ratio <= 0.67) return pick(MESSAGES.solid);
     return pick(MESSAGES.scenic);
+  }
+
+  function failMessage(guesses) {
+    const last = guesses[guesses.length - 1];
+    if (last) {
+      const exacts = last.channels.filter((c) => c.result === 'exact').length;
+      const nearly = last.channels.filter(
+        (c) => c.result === 'exact' || c.result === 'green',
+      ).length;
+      if (exacts >= 2 || nearly === 3) return pick(MESSAGES.heartbreak);
+    }
+    return pick(MESSAGES.lose);
   }
 
   const rgbToHex = ([r, g, b]) =>
@@ -143,8 +182,10 @@
 
     const channels = rgb.map((v, i) => {
       const delta = Math.abs(v - state.target[i]);
-      const result = classify(delta, state.thresholds[i]);
-      return { value: v, delta, result };
+      const t = state.thresholds[i];
+      const band = { green: t.green, yellow: t.yellow };
+      const result = classify(delta, t);
+      return { value: v, delta, result, band };
     });
 
     // Tighten AFTER classification, so subsequent guesses see the shrunken bands.
@@ -161,6 +202,50 @@
     render();
   }
 
+  function renderBands() {
+    const bands = $('bands');
+    bands.innerHTML = '';
+    const title = document.createElement('div');
+    title.className = 'bands-title';
+    title.textContent = 'Feedback ranges (|delta| per channel)';
+    bands.appendChild(title);
+
+    state.thresholds.forEach((t, i) => {
+      const g = Math.max(0, Math.floor(t.green));
+      const y = Math.max(0, Math.floor(t.yellow));
+      const greenPct = (t.green / 255) * 100;
+      const yellowPct = Math.max(0, ((t.yellow - t.green) / 255) * 100);
+      const redPct = Math.max(0, 100 - greenPct - yellowPct);
+
+      const row = document.createElement('div');
+      row.className = 'band';
+
+      const label = document.createElement('span');
+      label.className = 'band-label';
+      label.textContent = CHANNEL_NAMES[i];
+      row.appendChild(label);
+
+      const bar = document.createElement('div');
+      bar.className = 'band-bar';
+
+      const segs = [
+        { cls: 'green',  width: greenPct,  text: `≤${g}` },
+        { cls: 'yellow', width: yellowPct, text: `≤${y}` },
+        { cls: 'red',    width: redPct,    text: `>${y}` },
+      ];
+      segs.forEach((s) => {
+        const seg = document.createElement('span');
+        seg.className = `band-seg ${s.cls}`;
+        seg.style.width = `${s.width}%`;
+        seg.textContent = s.text;
+        seg.title = `${s.cls}: ${s.text}`;
+        bar.appendChild(seg);
+      });
+      row.appendChild(bar);
+      bands.appendChild(row);
+    });
+  }
+
   function render() {
     const swatch = $('targetSwatch');
     if (state.done) {
@@ -174,6 +259,7 @@
     }
     $('guessCount').textContent = state.guesses.length;
     $('maxGuessesLabel').textContent = state.maxGuesses;
+    renderBands();
 
     const history = $('history');
     history.innerHTML = '';
@@ -196,9 +282,29 @@
       g.channels.forEach((c, i) => {
         const block = document.createElement('span');
         block.className = `channel ${c.result}`;
-        const label = c.result === 'exact' ? '✓' : c.value;
-        block.textContent = `${CHANNEL_NAMES[i]}:${label}`;
-        block.title = `${CHANNEL_NAMES[i]} guess ${c.value}, Δ=${c.delta}`;
+
+        const main = document.createElement('span');
+        main.className = 'channel-main';
+        main.textContent = `${CHANNEL_NAMES[i]}:${c.result === 'exact' ? '✓' : c.value}`;
+        block.appendChild(main);
+
+        const caption = document.createElement('span');
+        caption.className = 'channel-range';
+        if (c.result === 'exact') {
+          caption.textContent = 'exact';
+        } else {
+          const g0 = Math.max(0, Math.floor(c.band.green));
+          const y0 = Math.max(0, Math.floor(c.band.yellow));
+          caption.textContent = `≤${g0} | ≤${y0}`;
+        }
+        block.appendChild(caption);
+
+        const g0 = Math.max(0, Math.floor(c.band.green));
+        const y0 = Math.max(0, Math.floor(c.band.yellow));
+        block.title =
+          `${CHANNEL_NAMES[i]} = ${c.value}   Δ = ${c.delta}\n` +
+          `Ranges at this guess: green ≤${g0}, yellow ≤${y0}, red >${y0}`;
+
         channels.appendChild(block);
       });
       row.appendChild(channels);
@@ -217,8 +323,9 @@
         result.innerHTML =
           `<h2>${msg}</h2><p>${hex} &nbsp;(${r}, ${g}, ${b}) in ${tally}.</p>`;
       } else {
+        const msg = failMessage(state.guesses);
         result.innerHTML =
-          `<h2>Out of guesses</h2><p>The color was <span class="reveal" style="background:${hex}"></span> <strong>${hex}</strong> (${r}, ${g}, ${b}).</p>`;
+          `<h2>${msg}</h2><p>The color was <span class="reveal" style="background:${hex}"></span> <strong>${hex}</strong> (${r}, ${g}, ${b}).</p>`;
       }
     } else {
       result.hidden = true;
