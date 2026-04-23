@@ -194,16 +194,21 @@
 
   function possibleRanges({ value: v, result, band }) {
     if (result === 'exact') return [[v, v]];
+    const g = Math.max(0, Math.floor(band.green));
+    const y = Math.max(0, Math.floor(band.yellow));
     if (result === 'green') {
-      const g = Math.max(0, Math.floor(band.green));
       return [[Math.max(0, v - g), Math.min(255, v + g)]];
     }
     if (result === 'yellow') {
-      const y = Math.max(0, Math.floor(band.yellow));
-      return [[Math.max(0, v - y), Math.min(255, v + y)]];
+      // |Δ| > g AND |Δ| ≤ y → two sub-intervals flanking the green zone
+      const out = [];
+      const leftHi = v - g - 1;
+      if (leftHi >= 0) out.push([Math.max(0, v - y), leftHi]);
+      const rightLo = v + g + 1;
+      if (rightLo <= 255) out.push([rightLo, Math.min(255, v + y)]);
+      return out;
     }
     // red: outside the yellow band at both ends
-    const y = Math.max(0, Math.floor(band.yellow));
     const out = [];
     if (v - y - 1 >= 0) out.push([0, v - y - 1]);
     if (v + y + 1 <= 255) out.push([v + y + 1, 255]);
@@ -331,7 +336,6 @@
 
     const feasible = [0, 1, 2].map((i) => feasibleRanges(i));
     const applyBtn = $('applySuggestion');
-    const title = panel.querySelector('.poss-title');
 
     [0, 1, 2].forEach((i) => {
       const ranges = feasible[i];
@@ -428,9 +432,6 @@
       channels.className = 'channels';
       g.channels.forEach((c, i) => {
         const letter = CHANNEL_NAMES[i];
-        const slot = document.createElement('div');
-        slot.className = `cchan c${letter.toLowerCase()}`;
-
         const block = document.createElement('span');
         block.className = `channel ${c.result}`;
 
@@ -453,8 +454,7 @@
           `${letter} = ${c.value}   Δ = ${c.delta}\n` +
           `Ranges at this guess: green ≤${gN}, yellow ≤${yN}, red >${yN}`;
 
-        slot.appendChild(block);
-        channels.appendChild(slot);
+        channels.appendChild(block);
       });
       row.appendChild(channels);
 
@@ -783,6 +783,6 @@
     }
   });
 
-  setGuess(parseHex($('colorPicker').value), 'picker');
+  setGuess(parseHex($('colorPicker').value) || [128, 128, 128], 'picker');
   newGame();
 })();

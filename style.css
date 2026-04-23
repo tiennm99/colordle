@@ -360,13 +360,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   flex-wrap: wrap;
 }
 
-.cchan {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  min-width: 4.4rem;
-}
-
 .channel {
   display: flex;
   flex-direction: column;
