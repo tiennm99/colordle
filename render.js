@@ -30,7 +30,11 @@ export function setGuess(rgb, origin) {
   const preview = $('guessPreview');
   preview.style.background = hexLower;
   preview.title = `${hex}  (${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-  RGB_IDS.forEach((id) => $(id).classList.remove('invalid'));
+  RGB_IDS.forEach((id) => {
+    const el = $(id);
+    el.classList.remove('invalid');
+    el.removeAttribute('aria-invalid');
+  });
 }
 
 // Renders the "Possible target" panel with range segments and optional midpoint button.
@@ -101,14 +105,16 @@ function renderPossible(state) {
   }
 }
 
-// Renders the daily badge (puzzle number + streak) when in daily mode
+// Renders the daily badge (puzzle number + streak) when in daily mode.
+// The badge is split across two spans inside .counter so "Colordle #N · Guess X/Y · Streak Z"
+// reads as a single hierarchy line instead of competing with the header.
 function renderDailyBadge(state, stats) {
   const badge = $('dailyBadge');
-  if (state.mode !== 'daily' || !state.dailyDate) {
-    badge.hidden = true;
-    return;
-  }
-  badge.hidden = false;
+  const streakWrap = $('dailyStreakWrap');
+  const isDaily = state.mode === 'daily' && state.dailyDate;
+  badge.hidden = !isDaily;
+  streakWrap.hidden = !isDaily;
+  if (!isDaily) return;
   $('dailyNumber').textContent = `Colordle #${dailyNumber(state.dailyDate)}`;
   $('dailyStreak').textContent = stats ? stats.streak : 0;
 }

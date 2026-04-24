@@ -26,11 +26,21 @@
         <button type="button" data-mode="daily" class="active" role="tab" aria-selected="true">Daily</button>
         <button type="button" data-mode="practice" role="tab" aria-selected="false">Practice</button>
       </div>
-      <div class="daily-badge" id="dailyBadge" hidden>
-        <span id="dailyNumber">Colordle #1</span>
-        <span>·</span>
-        <span>Streak <span class="daily-streak" id="dailyStreak">0</span></span>
-      </div>
+    </header>
+
+    <section class="target">
+      <div class="swatch" id="targetSwatch" aria-label="Target color"></div>
+      <p class="counter">
+        <span class="daily-badge" id="dailyBadge" hidden>
+          <span id="dailyNumber">Colordle #1</span>
+          <span class="sep">·</span>
+        </span>
+        Guess <span id="guessCount">0</span> / <span id="maxGuessesLabel">6</span>
+        <span class="daily-streak-wrap" id="dailyStreakWrap" hidden>
+          <span class="sep">·</span>
+          Streak <span class="daily-streak" id="dailyStreak">0</span>
+        </span>
+      </p>
       <div class="controls" id="practiceControls">
         <label>
           Max guesses
@@ -38,13 +48,6 @@
         </label>
         <button id="newGame" type="button">New puzzle</button>
       </div>
-    </header>
-
-    <section class="target">
-      <div class="swatch" id="targetSwatch" aria-label="Target color"></div>
-      <p class="counter">
-        Guess <span id="guessCount">0</span> / <span id="maxGuessesLabel">6</span>
-      </p>
     </section>
 
     <section class="input">
@@ -92,7 +95,7 @@
 
     <section class="history" id="history" aria-live="polite"></section>
 
-    <section class="result" id="result" hidden></section>
+    <section class="result" id="result" hidden aria-live="polite"></section>
 
     <footer>
       <p class="legend">

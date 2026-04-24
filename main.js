@@ -35,16 +35,21 @@ function readRgbInputs() {
 
 // ── Submit ───────────────────────────────────────────────────────────────────
 
+// Keep aria-invalid in sync with the .invalid CSS class for screen readers
+function setInvalid(el, isInvalid) {
+  el.classList.toggle('invalid', isInvalid);
+  if (isInvalid) el.setAttribute('aria-invalid', 'true');
+  else el.removeAttribute('aria-invalid');
+}
+
 function handleSubmit() {
   if (state.done) return;
   const rgb = readRgbInputs();
   if (!rgb) {
-    RGB_IDS.forEach((id) => {
-      if (parseChannel($(id).value) == null) $(id).classList.add('invalid');
-    });
+    RGB_IDS.forEach((id) => setInvalid($(id), parseChannel($(id).value) == null));
     return;
   }
-  RGB_IDS.forEach((id) => $(id).classList.remove('invalid'));
+  RGB_IDS.forEach((id) => setInvalid($(id), false));
   submitGuess(state, rgb);
   saveState(state);
 
@@ -152,7 +157,7 @@ RGB_IDS.forEach((id) => {
   el.addEventListener('input', () => {
     const rgb = readRgbInputs();
     if (rgb) setGuess(rgb, 'rgb');
-    else el.classList.add('invalid');
+    else setInvalid(el, true);
   });
 });
 
@@ -172,10 +177,14 @@ const prefs = loadPrefs();
 function applyHintsPref() {
   const btn = $('hintsToggle');
   const body = $('hintsBody');
+  const panel = $('possible');
   const label = btn.querySelector('.hints-toggle-label');
   btn.setAttribute('aria-expanded', prefs.hintsVisible ? 'true' : 'false');
   body.hidden = !prefs.hintsVisible;
   label.textContent = prefs.hintsVisible ? 'Hide hints' : 'Show hints';
+  // Collapsed: strip the card chrome so the toggle reads as a standalone pill,
+  // not an empty-looking container.
+  panel.classList.toggle('collapsed', !prefs.hintsVisible);
 }
 
 $('hintsToggle').addEventListener('click', () => {
