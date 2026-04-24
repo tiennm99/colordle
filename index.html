@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Colordle</title>
+  <meta name="description" content="Colordle — a Wordle-style daily color guessing game. Guess the hidden RGB color in six tries.">
+  <meta name="theme-color" content="#161616">
+  <meta property="og:title" content="Colordle">
+  <meta property="og:description" content="Guess the hidden RGB color, one channel at a time.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="colordle_icon.png">
+  <meta name="twitter:card" content="summary">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="stylesheet" href="style.css">
@@ -15,7 +22,16 @@
         <img src="colordle_icon.png" alt="" class="game-icon">
         Colordle
       </h1>
-      <div class="controls">
+      <div class="mode-switch" id="modeSwitch" role="tablist" aria-label="Game mode">
+        <button type="button" data-mode="daily" class="active" role="tab" aria-selected="true">Daily</button>
+        <button type="button" data-mode="practice" role="tab" aria-selected="false">Practice</button>
+      </div>
+      <div class="daily-badge" id="dailyBadge" hidden>
+        <span id="dailyNumber">Colordle #1</span>
+        <span>·</span>
+        <span>Streak <span class="daily-streak" id="dailyStreak">0</span></span>
+      </div>
+      <div class="controls" id="practiceControls">
         <label>
           Max guesses
           <input type="number" id="maxGuesses" value="6" min="1" max="50">
@@ -33,6 +49,8 @@
 
     <section class="input">
       <input type="color" id="colorPicker" value="#808080" aria-label="Pick a color">
+      <input type="text" id="hexInput" class="hex-input" value="#808080" maxlength="7"
+             inputmode="text" aria-label="Hex color">
       <div class="rgb-group" role="group" aria-label="RGB values">
         <input type="text" id="rInput" value="128" maxlength="3"
                inputmode="numeric" pattern="[0-9]*" aria-label="Red (0-255)">
@@ -83,6 +101,6 @@
       </p>
     </footer>
   </main>
-  <script src="app.js"></script>
+  <script type="module" src="main.js"></script>
 </body>
 </html>
