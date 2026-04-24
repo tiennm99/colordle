@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(git -C /Users/luke/Luke/Colordle status)",
-      "Bash(git -C /Users/luke/Luke/Colordle remote -v)"
-    ]
-  }
-}
