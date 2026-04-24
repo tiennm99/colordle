@@ -33,9 +33,11 @@ export function setGuess(rgb, origin) {
   RGB_IDS.forEach((id) => $(id).classList.remove('invalid'));
 }
 
-// Renders the "Possible target" panel with range segments and optional midpoint button
+// Renders the "Possible target" panel with range segments and optional midpoint button.
+// Rows are inserted into #hintsBody (the toggle-controlled container); visibility is
+// handled by the hidden attribute on the body itself, not here.
 function renderPossible(state) {
-  const panel = $('possible');
+  const panel = $('hintsBody');
   panel.querySelectorAll('.poss-row').forEach((el) => el.remove());
 
   const feasible = [0, 1, 2].map((i) => feasibleRanges(state, i));

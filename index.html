@@ -63,24 +63,31 @@
       <button id="submitGuess" type="button">Guess</button>
     </section>
 
-    <section class="possible" id="possible" aria-label="Possible target values">
-      <div class="poss-title">
-        <span>Possible target</span>
+    <section class="possible" id="possible" aria-label="Hints panel">
+      <div class="hints-header">
+        <button type="button" id="hintsToggle" class="hints-toggle"
+                aria-expanded="false" aria-controls="hintsBody">
+          <span class="hints-toggle-caret" aria-hidden="true"></span>
+          <span class="hints-toggle-label">Show hints</span>
+        </button>
         <span class="help-chip" tabindex="0" role="button"
-              aria-label="Explain possible target">?</span>
+              aria-label="Explain hints">?</span>
         <div class="help-tooltip" role="tooltip">
-          Each bar spans the 0–255 range for that channel. The
-          <b>highlighted</b> segment is where the target can still be,
-          after combining everything your guesses told you. Tick marks
-          are your past guess values. Zones tighten as you get closer:
-          a yellow result halves them, a green result quarters them.
+          Hints show where the target can still be, after combining
+          every guess so far. Each bar spans 0–255 for a channel; the
+          <b>highlighted</b> segment is the feasible region. Tick marks
+          are your past guess values. Hit <b>Try midpoint</b> for the
+          middle of the widest remaining range. Leave hints off for a
+          pure challenge.
         </div>
       </div>
-      <button id="applySuggestion" class="poss-apply" type="button" hidden>
-        <span class="poss-apply-label">Try midpoint</span>
-        <span class="poss-apply-swatch" id="applySuggestionSwatch"></span>
-        <span class="poss-apply-hex" id="applySuggestionHex"></span>
-      </button>
+      <div class="hints-body" id="hintsBody" hidden>
+        <button id="applySuggestion" class="poss-apply" type="button" hidden>
+          <span class="poss-apply-label">Try midpoint</span>
+          <span class="poss-apply-swatch" id="applySuggestionSwatch"></span>
+          <span class="poss-apply-hex" id="applySuggestionHex"></span>
+        </button>
+      </div>
     </section>
 
     <section class="history" id="history" aria-live="polite"></section>

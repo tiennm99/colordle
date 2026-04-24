@@ -269,6 +269,26 @@ export function clearState() {
   try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
 }
 
+// ── User preferences (UI-only) ──────────────────────────────────────────────
+
+const PREFS_KEY = 'colordle:prefs:v1';
+
+const DEFAULT_PREFS = () => ({
+  hintsVisible: false, // default-hidden so challenge mode is the default experience
+});
+
+export function loadPrefs() {
+  try {
+    return { ...DEFAULT_PREFS(), ...(JSON.parse(localStorage.getItem(PREFS_KEY)) || {}) };
+  } catch (_) {
+    return DEFAULT_PREFS();
+  }
+}
+
+export function savePrefs(prefs) {
+  try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (_) {}
+}
+
 // ── Streak / stats tracking ─────────────────────────────────────────────────
 
 const STATS_KEY = 'colordle:stats:v1';

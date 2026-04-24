@@ -8,6 +8,8 @@ import {
   saveState,
   loadState,
   loadStats,
+  loadPrefs,
+  savePrefs,
   recordDailyResult,
   todayUtc,
 } from './game.js';
@@ -161,6 +163,27 @@ RGB_IDS.forEach((id) => $(id).addEventListener('keydown', submitOnEnter));
 // Submit button
 $('submitGuess').addEventListener('click', handleSubmit);
 
+// ── Hints toggle ────────────────────────────────────────────────────────────
+// Hints are hidden by default so challenge mode is the out-of-the-box feel;
+// toggle preference is persisted so it sticks across sessions.
+
+const prefs = loadPrefs();
+
+function applyHintsPref() {
+  const btn = $('hintsToggle');
+  const body = $('hintsBody');
+  const label = btn.querySelector('.hints-toggle-label');
+  btn.setAttribute('aria-expanded', prefs.hintsVisible ? 'true' : 'false');
+  body.hidden = !prefs.hintsVisible;
+  label.textContent = prefs.hintsVisible ? 'Hide hints' : 'Show hints';
+}
+
+$('hintsToggle').addEventListener('click', () => {
+  prefs.hintsVisible = !prefs.hintsVisible;
+  savePrefs(prefs);
+  applyHintsPref();
+});
+
 // ── Initial load ─────────────────────────────────────────────────────────────
 
 (function init() {
@@ -192,5 +215,6 @@ $('submitGuess').addEventListener('click', handleSubmit);
 
   // Sync input fields with the initial guess colour
   setGuess(parseHex($('colorPicker').value) || [128, 128, 128], 'picker');
+  applyHintsPref();
   render(state, stats);
 })();
